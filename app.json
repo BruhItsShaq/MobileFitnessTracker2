@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "MobileFitnessTracker",
+    "slug": "MobileFitnessTracker",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}
