@@ -43,6 +43,7 @@ const HomeScreen = () => {
         caloriesBurnedToday: 0,
         caloriesLeft: 0,
         progress: 0,
+        calorie_goal: 0,
     });
 
     const { colors } = useTheme();
@@ -70,7 +71,8 @@ const HomeScreen = () => {
             <Card style={styles.card}>
                 <Card.Content>
                     <Title>Calories</Title>
-                    <Caption>Goal: {userData.caloriesLeft} kcal</Caption>
+                    <Caption>Goal: {userData.calorie_goal} kcal</Caption>
+                    <Caption>Calories remaining: {userData.caloriesLeft} kcal</Caption>
                     <CustomProgressBar
                         progress={userData.progress}
                         color={colors.primary}

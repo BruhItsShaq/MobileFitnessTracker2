@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, push } from 'firebase/database';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -18,6 +19,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const auth = getAuth(app);
+
 
 export const signUp = async (email, password, username, age, gender, weight, height, activityLevel, goal, sleepGoal, calorieGoal) => {
     try {
@@ -80,10 +82,11 @@ export const login = async (email, password) => {
 };
 
 const calculateCalorieProgress = (totalCaloriesBurned, caloriesConsumed, calorieGoal) => {
-    const caloriesLeft = calorieGoal - totalCaloriesBurned + caloriesConsumed;
+    const caloriesLeft = calorieGoal - caloriesConsumed + totalCaloriesBurned;
     const progress = Math.min(caloriesConsumed / calorieGoal, 1);
     return { caloriesLeft, progress };
 };
+
 
 export const getUserData = async () => {
     try {
@@ -95,14 +98,14 @@ export const getUserData = async () => {
         const snapshot = await get(userRef);
         if (snapshot.exists()) {
             const userData = snapshot.val();
-            const { total_calories_burned, total_steps } = userData;
-            const calorieEntriesRef = ref(database, `user_calories/${userId}`);
-            const calorieEntriesSnapshot = await get(calorieEntriesRef);
+            const { total_steps, calorie_goal } = userData;
+            const nutritionEntriesRef = ref(database, `user_nutrition/${userId}`);
+            const nutritionEntriesSnapshot = await get(nutritionEntriesRef);
             let caloriesConsumedToday = 0;
-            if (calorieEntriesSnapshot.exists()) {
-                const calorieEntries = calorieEntriesSnapshot.val();
+            if (nutritionEntriesSnapshot.exists()) {
+                const nutritionEntries = nutritionEntriesSnapshot.val();
                 const today = new Date().toISOString().slice(0, 10);
-                Object.values(calorieEntries).forEach((entry) => {
+                Object.values(nutritionEntries).forEach((entry) => {
                     if (entry.timestamp.slice(0, 10) === today) {
                         caloriesConsumedToday += entry.calories_consumed;
                     }
@@ -120,8 +123,8 @@ export const getUserData = async () => {
                     }
                 });
             }
-            const { caloriesLeft, progress } = calculateCalorieProgress(total_calories_burned, caloriesConsumedToday, userData.calorie_goal);
-            return { totalSteps: total_steps, caloriesConsumedToday, caloriesBurnedToday, caloriesLeft, progress };
+            const { caloriesLeft, progress } = calculateCalorieProgress(caloriesBurnedToday, caloriesConsumedToday, calorie_goal);
+            return { totalSteps: total_steps, caloriesConsumedToday, caloriesBurnedToday, caloriesLeft, progress, calorie_goal };
         } else {
             throw new Error("User data not found.");
         }
@@ -131,6 +134,7 @@ export const getUserData = async () => {
         throw error;
     }
 };
+
 
 export const addNutritionData = async (userId, caloriesConsumed, foodItem, mealType, servingSize) => {
     try {
@@ -203,5 +207,16 @@ export const getNutritionAndSleepData = async (userId, date) => {
     } catch (error) {
         console.error(error);
         throw error;
+    }
+};
+
+export const updateUserData = async (userId, caloriesBurned, caloriesEaten, steps) => {
+    try {
+        const functions = getFunctions();
+        const updateUserDataCallable = httpsCallable(functions, 'newupdateUserData');
+        const response = await updateUserDataCallable({ userId, caloriesBurned, caloriesEaten, steps });
+        console.log(response.data);
+    } catch (error) {
+        console.error('Error calling updateUserData:', error);
     }
 };
