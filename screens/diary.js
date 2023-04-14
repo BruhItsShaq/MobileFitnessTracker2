@@ -6,7 +6,7 @@ import Modal from "react-native-modal";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { addNutritionData, addSleepData, getNutritionAndSleepData, } from "../firebase/dbRequests";
+import { addNutritionData, addSleepData, getNutritionAndSleepData, updateUserData } from "../firebase/dbRequests";
 
 const DiaryScreen = () => {
     const navigation = useNavigation();
@@ -76,6 +76,9 @@ const DiaryScreen = () => {
                 mealType,
                 parseFloat(servingSize)
             );
+
+            await updateUserData(userId, 0, parseInt(caloriesConsumed), 0);
+            
             setNutritionModalVisible(false);
             fetchData();
         } catch (error) {

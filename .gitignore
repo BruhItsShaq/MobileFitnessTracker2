@@ -53,3 +53,6 @@ yarn-error.log
 .expo/
 web-build/
 dist/
+
+#Firebase Admin service key
+mobilefitnesstracker-8dae7-firebase-adminsdk-iz685-49bfa64b97.json
