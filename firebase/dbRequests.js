@@ -1,0 +1,133 @@
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set, get } from 'firebase/database';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAShAmJT6R3cEXA5pEeCU4sO-AyGN5ZeFM",
+    authDomain: "mobilefitnesstracker-8dae7.firebaseapp.com",
+    databaseURL: "https://mobilefitnesstracker-8dae7-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "mobilefitnesstracker-8dae7",
+    storageBucket: "mobilefitnesstracker-8dae7.appspot.com",
+    messagingSenderId: "1006972690213",
+    appId: "1:1006972690213:web:d5b8c1fedaf0b6103d04cc",
+    measurementId: "G-6XEE145XDZ"
+};
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const auth = getAuth(app);
+
+export const signUp = async (email, password, username, age, gender, weight, height, activityLevel, goal, sleepGoal, calorieGoal) => {
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Get the user ID from the Firebase Authentication User object
+        const userId = userCredential.user.uid;
+
+        // Add the user data to the Firebase Realtime Database
+        set(ref(database, 'users/' + userId), {
+            activity_level: activityLevel,
+            age: age,
+            email: email,
+            gender: gender,
+            goal: goal,
+            height: height,
+            password_hash: password,
+            sleep_goal: sleepGoal,
+            username: username,
+            weight: weight,
+            calorie_goal: calorieGoal
+        });
+    } catch (error) {
+        // Handle errors here
+        console.error(error);
+        throw error;
+    }
+};
+
+export const login = async (email, password) => {
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Get the user ID from the Firebase Authentication User object
+        const userId = userCredential.user.uid;
+
+        // Store the user ID in AsyncStorage
+        await AsyncStorage.setItem('userId', userId);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("User is signed in.");
+            } else {
+                console.log("User is signed out.");
+            }
+        });
+
+        // Retrieve the user data from the Firebase Realtime Database
+        const userRef = ref(database, 'users/' + userId);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+            const userData = snapshot.val();
+            return userData;
+        } else {
+            throw new Error("User data not found.");
+        }
+    } catch (error) {
+        // Handle errors here
+        console.error(error);
+        throw error;
+    }
+};
+
+const calculateCalorieProgress = (totalCaloriesBurned, caloriesConsumed, calorieGoal) => {
+    const caloriesLeft = calorieGoal - totalCaloriesBurned + caloriesConsumed;
+    const progress = Math.min(caloriesConsumed / calorieGoal, 1);
+    return { caloriesLeft, progress };
+};
+
+export const getUserData = async () => {
+    try {
+        const userId = await AsyncStorage.getItem('userId');
+        if (!userId) {
+            throw new Error('User id not found in AsyncStorage.');
+        }
+        const userRef = ref(database, 'users/' + userId);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+            const userData = snapshot.val();
+            const { total_calories_burned, total_steps } = userData;
+            const calorieEntriesRef = ref(database, `user_calories/${userId}`);
+            const calorieEntriesSnapshot = await get(calorieEntriesRef);
+            let caloriesConsumedToday = 0;
+            if (calorieEntriesSnapshot.exists()) {
+                const calorieEntries = calorieEntriesSnapshot.val();
+                const today = new Date().toISOString().slice(0, 10);
+                Object.values(calorieEntries).forEach((entry) => {
+                    if (entry.timestamp.slice(0, 10) === today) {
+                        caloriesConsumedToday += entry.calories_consumed;
+                    }
+                });
+            }
+            const workoutEntriesRef = ref(database, `user_workouts/${userId}`);
+            const workoutEntriesSnapshot = await get(workoutEntriesRef);
+            let caloriesBurnedToday = 0;
+            if (workoutEntriesSnapshot.exists()) {
+                const workoutEntries = workoutEntriesSnapshot.val();
+                const today = new Date().toISOString().slice(0, 10);
+                Object.values(workoutEntries).forEach((entry) => {
+                    if (entry.timestamp.slice(0, 10) === today) {
+                        caloriesBurnedToday += entry.calories_burned;
+                    }
+                });
+            }
+            const { caloriesLeft, progress } = calculateCalorieProgress(total_calories_burned, caloriesConsumedToday, userData.calorie_goal);
+            return { totalSteps: total_steps, caloriesConsumedToday, caloriesBurnedToday, caloriesLeft, progress };
+        } else {
+            throw new Error("User data not found.");
+        }
+    } catch (error) {
+        // Handle errors here
+        console.error(error);
+        throw error;
+    }
+};
