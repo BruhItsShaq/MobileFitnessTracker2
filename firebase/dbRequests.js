@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get } from 'firebase/database';
+import { getDatabase, ref, set, get, push } from 'firebase/database';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -127,6 +127,80 @@ export const getUserData = async () => {
         }
     } catch (error) {
         // Handle errors here
+        console.error(error);
+        throw error;
+    }
+};
+
+export const addNutritionData = async (userId, caloriesConsumed, foodItem, mealType, servingSize) => {
+    try {
+        const nutritionRef = ref(database, `user_nutrition/${userId}`);
+        const newNutritionRef = push(nutritionRef);
+
+        const timestamp = new Date().toISOString();
+        await set(newNutritionRef, {
+            calories_consumed: caloriesConsumed,
+            food_item: foodItem,
+            meal_type: mealType,
+            serving_size: servingSize,
+            timestamp: timestamp,
+        });
+
+        return newNutritionRef.key;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+};
+
+export const addSleepData = async (userId, sleepDuration) => {
+    try {
+        const sleepRef = ref(database, `user_sleep/${userId}`);
+        const newSleepRef = push(sleepRef);
+
+        const timestamp = new Date().toISOString();
+        await set(newSleepRef, {
+            sleep_duration: sleepDuration,
+            timestamp: timestamp,
+        });
+
+        return newSleepRef.key;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+};
+
+export const getNutritionAndSleepData = async (userId, date) => {
+    try {
+        const nutritionRef = ref(database, `user_nutrition/${userId}`);
+        const nutritionSnapshot = await get(nutritionRef);
+        const sleepRef = ref(database, `user_sleep/${userId}`);
+        const sleepSnapshot = await get(sleepRef);
+
+        const nutritionData = {};
+        const sleepData = {};
+
+        if (nutritionSnapshot.exists()) {
+            const nutritionEntries = nutritionSnapshot.val();
+            Object.entries(nutritionEntries).forEach(([key, entry]) => {
+                if (entry.timestamp.slice(0, 10) === date) {
+                    nutritionData[key] = entry;
+                }
+            });
+        }
+
+        if (sleepSnapshot.exists()) {
+            const sleepEntries = sleepSnapshot.val();
+            Object.entries(sleepEntries).forEach(([key, entry]) => {
+                if (entry.timestamp.slice(0, 10) === date) {
+                    sleepData[key] = entry;
+                }
+            });
+        }
+
+        return { nutritionData, sleepData };
+    } catch (error) {
         console.error(error);
         throw error;
     }

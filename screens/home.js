@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, TouchableOpacity } from 'react-native';
 import { Card, Title, Caption, useTheme } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getUserData } from '../firebase/dbRequests';
 
 const CustomProgressBar = ({ progress, color, style }) => {
@@ -47,18 +47,23 @@ const HomeScreen = () => {
 
     const { colors } = useTheme();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const data = await getUserData();
-                setUserData(data);
-            } catch (error) {
-                console.error('Error fetching user data:', error);
-            }
-        };
+    useFocusEffect(
+        React.useCallback(() => {
+            const fetchData = async () => {
+                try {
+                    const data = await getUserData();
+                    setUserData(data);
+                } catch (error) {
+                    console.error('Error fetching user data:', error);
+                }
+            };
 
-        fetchData();
-    }, []);
+            fetchData();
+
+            return () => { }; // Return an empty cleanup function.
+        }, [])
+    );
+
 
     return (
         <ScrollView style={styles.container}>
