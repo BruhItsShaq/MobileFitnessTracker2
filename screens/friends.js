@@ -4,7 +4,7 @@ import { View, Text } from 'react-native';
 const FriendsScreen = () => {
     return (
         <View>
-            <Text>Friends Screen</Text>
+            <Text>COMING SOON!</Text>
         </View>
     );
 }

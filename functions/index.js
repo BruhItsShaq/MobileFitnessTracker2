@@ -85,17 +85,21 @@ exports.newupdateUserData = functions.https.onRequest(async (req, res) => {
 
 
 exports.resetDailyUserData = functions.pubsub.schedule('0 0 * * *').timeZone('Europe/London').onRun(async (context) => {
+
+    console.log('resetDailyUserData started');
     const usersSnapshot = await admin.firestore().collection('users').get();
     const batch = admin.firestore().batch();
 
     usersSnapshot.docs.forEach((doc) => {
-        batch.update(doc.ref, {
+        console.log(`Updating document: ${doc.id}`);
+        batch.set(doc.ref, {
             total_calories_burned: 0,
             total_calories_eaten: 0,
             total_steps: 0,
-        });
+        }, { merge: true });
     });
 
     await batch.commit();
+    console.log("Bathc")
     console.log('Daily user data reset successfully');
 });
