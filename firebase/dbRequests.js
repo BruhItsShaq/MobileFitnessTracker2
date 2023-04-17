@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, push, query, orderByChild, startAt, endAt } from 'firebase/database';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { getDatabase, ref, set, get, push, query, orderByChild, startAt, endAt, update } from 'firebase/database';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import moment from 'moment';
@@ -123,7 +123,20 @@ export const getUserData = async () => {
         const snapshot = await get(userRef);
         if (snapshot.exists()) {
             const userData = snapshot.val();
-            const { total_steps, calorie_goal, total_calories_burned, total_calories_eaten } = userData;
+            const {
+                username,
+                email,
+                gender,
+                goal,
+                height,
+                password,
+                weight,
+                calorie_goal,
+                sleep_goal,
+                total_steps,
+                total_calories_burned,
+                total_calories_eaten,
+            } = userData;
 
             const sleepDurationToday = await getSleepDataToday();
             const sleepProgress = Math.min(sleepDurationToday / userData.sleep_goal, 1);
@@ -132,12 +145,46 @@ export const getUserData = async () => {
             const caloriesConsumedToday = total_calories_eaten;
 
             const { caloriesLeft, progress } = calculateCalorieProgress(caloriesBurnedToday, caloriesConsumedToday, calorie_goal);
-            return { totalSteps: total_steps, caloriesConsumedToday, caloriesBurnedToday, caloriesLeft, progress, calorie_goal, sleep_goal: userData.sleep_goal, sleepDurationToday, sleepProgress };
+            return {
+                username,
+                email,
+                gender,
+                goal,
+                height,
+                password,
+                weight,
+                calorie_goal,
+                sleep_goal,
+                totalSteps: total_steps,
+                caloriesConsumedToday,
+                caloriesBurnedToday,
+                caloriesLeft,
+                progress,
+                sleepDurationToday,
+                sleepProgress
+            };
         } else {
             throw new Error("User data not found.");
         }
     } catch (error) {
         // Handle errors here
+        console.error(error);
+        throw error;
+    }
+};
+
+export const editUserData = async (updatedUserData) => {
+    try {
+        const userId = await AsyncStorage.getItem('userId');
+        if (!userId) {
+            throw new Error('User id not found in AsyncStorage.');
+        }
+
+        const userRef = ref(database, 'users/' + userId);
+
+        await update(userRef, updatedUserData);
+
+    } catch (error) {
         console.error(error);
         throw error;
     }
@@ -301,6 +348,15 @@ export const getStepsAndWorkoutsData = async (userId, date) => {
         return { stepData, workoutData };
     } catch (error) {
         console.error(error);
+        throw error;
+    }
+};
+
+export const logoutUser = async () => {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error('Error signing out:', error);
         throw error;
     }
 };

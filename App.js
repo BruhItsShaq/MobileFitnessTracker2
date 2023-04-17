@@ -32,7 +32,7 @@ export default function App() {
       <Stack.Navigator initialRouteName='Login'>
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUp" component={SignUp} />
-        <Stack.Screen name="Main" component={MainTabNavigator} option={{ headerShown: false, headerLeft: null }} />
+        <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false, headerLeft: null }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
