@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, TouchableOpacity } from 'react-native';
 import { Card, Title, Caption, useTheme } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import { getUserData } from '../firebase/dbRequests';
 
 const CustomProgressBar = ({ progress, color, style }) => {
     console.log('Sleep progress:', progress);
     const [animatedValue] = useState(new Animated.Value(0));
     const [scaleValue] = useState(new Animated.Value(1));
+    const [spinValue] = useState(new Animated.Value(0));
 
     useEffect(() => {
         Animated.timing(animatedValue, {
@@ -28,6 +30,14 @@ const CustomProgressBar = ({ progress, color, style }) => {
                         useNativeDriver: false,
                     }),
                 ]).start();
+
+                Animated.loop(
+                    Animated.timing(spinValue, {
+                        toValue: 1,
+                        duration: 2000,
+                        useNativeDriver: true,
+                    })
+                ).start();
             }
         });
     }, [progress]);
@@ -35,6 +45,11 @@ const CustomProgressBar = ({ progress, color, style }) => {
     const width = animatedValue.interpolate({
         inputRange: [0, 1],
         outputRange: ['0%', '100%'],
+    });
+
+    const spin = spinValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
     });
 
     return (
@@ -50,6 +65,19 @@ const CustomProgressBar = ({ progress, color, style }) => {
                     },
                 ]}
             />
+            {progress === 1 && (
+                <Animated.View
+                    style={{
+                        position: 'absolute',
+                        top: -35,
+                        left: '60%',
+                        marginLeft: -12.5,
+                        transform: [{ rotate: spin }],
+                    }}
+                >
+                    <Icon name="trophy" size={30} color="#f1c40f" />
+                </Animated.View>
+            )}
         </View>
     );
 };
