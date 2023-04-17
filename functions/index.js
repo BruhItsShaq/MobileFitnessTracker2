@@ -27,6 +27,12 @@ exports.newupdateUserData = functions.https.onRequest(async (req, res) => {
             const decodedToken = await admin.auth().verifyIdToken(authToken.replace('Bearer ', ''));
             const { userId, caloriesBurned, caloriesEaten, steps } = req.body.data;
 
+            console.log('Input values:', {
+                caloriesBurned,
+                caloriesEaten,
+                steps,
+            });
+
             if (decodedToken.uid !== userId) {
                 res.status(401).send(`User ID does not match the authenticated user. Expected: ${decodedToken.uid}, Actual: ${userId}`);
                 return;
@@ -40,15 +46,25 @@ exports.newupdateUserData = functions.https.onRequest(async (req, res) => {
                 }
 
                 const userData = snapshot.val();
+                console.log('userData before updating:', userData);
+
                 const newCaloriesBurned = userData.total_calories_burned + caloriesBurned;
                 const newCaloriesEaten = userData.total_calories_eaten + caloriesEaten;
                 const newSteps = userData.total_steps + steps;
+
+                console.log('newCaloriesBurned:', newCaloriesBurned);
+                console.log('newCaloriesEaten:', newCaloriesEaten);
+                console.log('newSteps:', newSteps);
 
                 await userRef.update({
                     total_calories_burned: newCaloriesBurned,
                     total_calories_eaten: newCaloriesEaten,
                     total_steps: newSteps,
                 });
+
+                const updatedSnapshot = await userRef.once('value');
+                const updatedUserData = updatedSnapshot.val();
+                console.log('userData after updating:', updatedUserData);
 
                 res.status(200).json({
                     message: 'User data updated successfully',

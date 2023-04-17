@@ -1,9 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, push } from 'firebase/database';
+import { getDatabase, ref, set, get, push, query, orderByChild, startAt, endAt } from 'firebase/database';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import moment from 'moment';
 
 const firebaseConfig = {
     apiKey: "AIzaSyAShAmJT6R3cEXA5pEeCU4sO-AyGN5ZeFM",
@@ -87,6 +87,31 @@ const calculateCalorieProgress = (totalCaloriesBurned, caloriesConsumed, calorie
     return { caloriesLeft, progress };
 };
 
+const getSleepDataToday = async () => {
+    const userId = await AsyncStorage.getItem('userId');
+
+    const sleepRef = ref(database, `user_sleep/${userId}`);
+
+    const snapshot = await get(sleepRef);
+
+    const today = moment().startOf('day');
+    const tomorrow = moment(today).add(1, 'day');
+
+    let sleepDurationToday = 0;
+    snapshot.forEach((childSnapshot) => {
+        const childData = childSnapshot.val();
+        const sleepMoment = moment(childData.timestamp);
+
+        if (sleepMoment.isSameOrAfter(today) && sleepMoment.isBefore(tomorrow)) {
+            sleepDurationToday += childData.sleep_duration;
+        }
+    });
+
+    console.log('sleepDurationToday:', sleepDurationToday);
+    return sleepDurationToday;
+};
+
+
 
 export const getUserData = async () => {
     try {
@@ -98,33 +123,16 @@ export const getUserData = async () => {
         const snapshot = await get(userRef);
         if (snapshot.exists()) {
             const userData = snapshot.val();
-            const { total_steps, calorie_goal } = userData;
-            const nutritionEntriesRef = ref(database, `user_nutrition/${userId}`);
-            const nutritionEntriesSnapshot = await get(nutritionEntriesRef);
-            let caloriesConsumedToday = 0;
-            if (nutritionEntriesSnapshot.exists()) {
-                const nutritionEntries = nutritionEntriesSnapshot.val();
-                const today = new Date().toISOString().slice(0, 10);
-                Object.values(nutritionEntries).forEach((entry) => {
-                    if (entry.timestamp.slice(0, 10) === today) {
-                        caloriesConsumedToday += entry.calories_consumed;
-                    }
-                });
-            }
-            const workoutEntriesRef = ref(database, `user_workouts/${userId}`);
-            const workoutEntriesSnapshot = await get(workoutEntriesRef);
-            let caloriesBurnedToday = 0;
-            if (workoutEntriesSnapshot.exists()) {
-                const workoutEntries = workoutEntriesSnapshot.val();
-                const today = new Date().toISOString().slice(0, 10);
-                Object.values(workoutEntries).forEach((entry) => {
-                    if (entry.timestamp.slice(0, 10) === today) {
-                        caloriesBurnedToday += entry.calories_burned;
-                    }
-                });
-            }
+            const { total_steps, calorie_goal, total_calories_burned, total_calories_eaten } = userData;
+
+            const sleepDurationToday = await getSleepDataToday();
+            const sleepProgress = Math.min(sleepDurationToday / userData.sleep_goal, 1);
+
+            const caloriesBurnedToday = total_calories_burned;
+            const caloriesConsumedToday = total_calories_eaten;
+
             const { caloriesLeft, progress } = calculateCalorieProgress(caloriesBurnedToday, caloriesConsumedToday, calorie_goal);
-            return { totalSteps: total_steps, caloriesConsumedToday, caloriesBurnedToday, caloriesLeft, progress, calorie_goal };
+            return { totalSteps: total_steps, caloriesConsumedToday, caloriesBurnedToday, caloriesLeft, progress, calorie_goal, sleep_goal: userData.sleep_goal, sleepDurationToday, sleepProgress };
         } else {
             throw new Error("User data not found.");
         }
@@ -218,5 +226,81 @@ export const updateUserData = async (userId, caloriesBurned, caloriesEaten, step
         console.log(response.data);
     } catch (error) {
         console.error('Error calling updateUserData:', error);
+    }
+};
+
+export const addStepsData = async (userId, stepsCount) => {
+    try {
+        const stepsRef = ref(database, `user_steps/${userId}`);
+        const newStepsRef = push(stepsRef);
+
+        const timestamp = new Date().toISOString();
+        await set(newStepsRef, {
+            steps_count: stepsCount,
+            timestamp: timestamp,
+        });
+
+        return newStepsRef.key;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+};
+
+// Add workout data
+export const addWorkoutData = async (userId, activityType, caloriesBurned, distance, duration) => {
+    try {
+        const workoutsRef = ref(database, `user_workouts/${userId}`);
+        const newWorkoutRef = push(workoutsRef);
+
+        const timestamp = new Date().toISOString();
+        await set(newWorkoutRef, {
+            activity_type: activityType,
+            calories_burned: caloriesBurned,
+            distance: distance,
+            duration: duration,
+            timestamp: timestamp,
+        });
+
+        return newWorkoutRef.key;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+};
+
+// Get steps and workouts data for a specific date
+export const getStepsAndWorkoutsData = async (userId, date) => {
+    try {
+        const stepsRef = ref(database, `user_steps/${userId}`);
+        const stepsSnapshot = await get(stepsRef);
+        const workoutsRef = ref(database, `user_workouts/${userId}`);
+        const workoutsSnapshot = await get(workoutsRef);
+
+        const stepData = {};
+        const workoutData = {};
+
+        if (stepsSnapshot.exists()) {
+            const stepsEntries = stepsSnapshot.val();
+            Object.entries(stepsEntries).forEach(([key, entry]) => {
+                if (entry.timestamp.slice(0, 10) === date) {
+                    stepData[key] = entry;
+                }
+            });
+        }
+
+        if (workoutsSnapshot.exists()) {
+            const workoutEntries = workoutsSnapshot.val();
+            Object.entries(workoutEntries).forEach(([key, entry]) => {
+                if (entry.timestamp.slice(0, 10) === date) {
+                    workoutData[key] = entry;
+                }
+            });
+        }
+
+        return { stepData, workoutData };
+    } catch (error) {
+        console.error(error);
+        throw error;
     }
 };
