@@ -5,14 +5,31 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getUserData } from '../firebase/dbRequests';
 
 const CustomProgressBar = ({ progress, color, style }) => {
+    console.log('Sleep progress:', progress);
     const [animatedValue] = useState(new Animated.Value(0));
+    const [scaleValue] = useState(new Animated.Value(1));
 
     useEffect(() => {
         Animated.timing(animatedValue, {
             toValue: progress,
             duration: 500,
             useNativeDriver: false,
-        }).start();
+        }).start(() => {
+            if (progress === 1) {
+                Animated.sequence([
+                    Animated.timing(scaleValue, {
+                        toValue: 1.1,
+                        duration: 300,
+                        useNativeDriver: false,
+                    }),
+                    Animated.timing(scaleValue, {
+                        toValue: 1,
+                        duration: 300,
+                        useNativeDriver: false,
+                    }),
+                ]).start();
+            }
+        });
     }, [progress]);
 
     const width = animatedValue.interpolate({
@@ -29,12 +46,14 @@ const CustomProgressBar = ({ progress, color, style }) => {
                         backgroundColor: color,
                         height: '100%',
                         borderRadius: 5,
+                        transform: [{ scaleX: scaleValue }],
                     },
                 ]}
             />
         </View>
     );
 };
+
 const HomeScreen = () => {
     const navigation = useNavigation();
     const [userData, setUserData] = useState({
@@ -44,6 +63,9 @@ const HomeScreen = () => {
         caloriesLeft: 0,
         progress: 0,
         calorie_goal: 0,
+        sleep_goal: 0,
+        sleepDurationToday: 0,
+        sleepProgress: 0,
     });
 
     const { colors } = useTheme();
@@ -94,6 +116,18 @@ const HomeScreen = () => {
                             Exercise: {userData.caloriesBurnedToday} kcal
                         </Text>
                     </TouchableOpacity>
+                </Card.Content>
+            </Card>
+            <Card style={styles.card}>
+                <Card.Content>
+                    <Title>Sleep</Title>
+                    <Caption>Goal: {userData.sleep_goal} hours</Caption>
+                    <Caption>Duration: {userData.sleepDurationToday} hours</Caption>
+                    <CustomProgressBar
+                        progress={userData.sleepProgress}
+                        color={colors.primary}
+                        style={styles.progressBar}
+                    />
                 </Card.Content>
             </Card>
             <TouchableOpacity onPress={() => navigation.navigate('Diary')}>
