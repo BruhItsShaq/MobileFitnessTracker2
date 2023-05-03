@@ -1,27 +1,45 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Picker } from 'react-native';
 import { signUp } from '../firebase/dbRequests';
+import * as EmailValidator from 'email-validator';
+
 
 const SignUp = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [username, setUsername] = useState('');
     const [age, setAge] = useState('');
-    const [gender, setGender] = useState('');
+    const [gender, setGender] = useState('male');
     const [weight, setWeight] = useState('');
     const [height, setHeight] = useState('');
-    const [activityLevel, setActivityLevel] = useState('');
+    const [activityLevel, setActivityLevel] = useState('1');
     const [goal, setGoal] = useState('');
     const [sleepGoal, setSleepGoal] = useState('');
     const [error, setError] = useState('');
     const [calorieGoal, setCalorieGoal] = useState('');
 
-    const handleSignUp = () => {
+    const validatePassword = (password) => {
+        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
+        return passwordRegex.test(password);
+    };
+
+    const handleSignUp = async () => {
         // Validate input
-        // if (!email || !password || !username || !age || !gender || !weight || !height || !activityLevel || !goal || !sleepGoal) {
-        //     setError('Please fill out all fields');
-        //     return;
-        // }
+        const fields = [email, password, username, age, gender, weight, height, activityLevel, goal, sleepGoal, calorieGoal];
+        if (!fields.every(field => field)) {
+            setError('Please fill out all fields');
+            return;
+        }
+
+        if (!validatePassword(password)) {
+            setError("Password isn't strong enough (One upper, one lower, one special, one number, at least 8 characters long)");
+            return;
+        }
+
+        if (!EmailValidator.validate(email)) {
+            setError('Please enter a valid email');
+            return;
+        }
 
         // Make sure age, weight, height, and sleepGoal are numbers
         if (isNaN(age) || isNaN(weight) || isNaN(height) || isNaN(sleepGoal)) {
@@ -30,10 +48,13 @@ const SignUp = ({ navigation }) => {
         }
 
         // Call signUp function and handle errors
-        signUp(email, password, username, age, gender, weight, height, activityLevel, goal, sleepGoal, calorieGoal)
-            .catch((error) => {
-                setError(error.message);
-            });
+        try {
+            await signUp(email, password, username, age, gender, weight, height, activityLevel, goal, sleepGoal, calorieGoal);
+            navigation.navigate('Main');
+        } catch (error) {
+            setError(error.message);
+        }
+
     };
 
     return (
@@ -95,7 +116,7 @@ const SignUp = ({ navigation }) => {
 
             <Text style={styles.label}>Sleep Goal (hrs)</Text>
             <TextInput style={styles.inputSmall} value={sleepGoal} onChangeText={(text) => setSleepGoal(text)} keyboardType="numeric" />
-           
+
             <Text style={styles.label}>Calorie goals (kcal)</Text>
             <TextInput style={styles.inputSmall} value={calorieGoal} onChangeText={(text) => setCalorieGoal(text)} keyboardType="numeric" />
 
@@ -117,11 +138,10 @@ const SignUp = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         backgroundColor: '#fff',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 30,
+        paddingHorizontal: 10,
     },
     error: {
         color: 'red',
@@ -129,45 +149,44 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     heading: {
-        fontSize: 32,
+        fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 20,
-        alignSelf: 'flex-start',
+        marginTop: 20,
+        marginBottom: 3,
     },
     label: {
-        fontSize: 20,
-        marginTop: 20,
-        marginBottom: 10,
-        alignSelf: 'flex-start',
+        fontSize: 16,
+        marginTop: 5,
+        marginBottom: 5,
     },
     input: {
         borderWidth: 1,
         borderColor: '#D3D3D3',
         borderRadius: 5,
-        padding: 15,
-        width: '100%',
-        marginBottom: 20,
-        fontSize: 18,
+        padding: 5,
+        width: '50%',
+        marginBottom: 5,
+        fontSize: 12,
     },
     inputSmall: {
         borderWidth: 1,
         borderColor: '#D3D3D3',
         borderRadius: 5,
-        padding: 10,
+        padding: 5,
         width: '40%',
-        marginBottom: 20,
-        fontSize: 18,
+        marginBottom: 5,
+        fontSize: 12,
     },
     picker: {
         borderWidth: 1,
         borderColor: '#D3D3D3',
         borderRadius: 5,
         padding: 10,
-        width: '100%',
-        marginBottom: 20,
+        width: '60%',
+        marginBottom: 5,
     },
     buttonContainer: {
-        width: '100%',
+        width: '60%',
         alignItems: 'center',
         marginTop: 20,
     },
@@ -176,7 +195,7 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         paddingHorizontal: 25,
         borderRadius: 5,
-        width: '100%',
+        width: '70%',
     },
     buttonText: {
         color: '#fff',

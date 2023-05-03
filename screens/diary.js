@@ -22,6 +22,8 @@ const DiaryScreen = () => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [nutritionData, setNutritionData] = useState({});
     const [sleepData, setSleepData] = useState({});
+    const [nutritionError, setNutritionError] = useState('');
+    const [sleepError, setSleepError] = useState('');
 
     useEffect(() => {
         fetchData();
@@ -65,8 +67,35 @@ const DiaryScreen = () => {
         return null;
     };
 
+    const validateNutritionInput = () => {
+        const isAlphabetic = (str) => /^[a-zA-Z\s]+$/.test(str);
+
+        if (foodItem.trim() === '' || !isAlphabetic(foodItem)) {
+            setNutritionError('Food item is required and must only contain letters');
+            return false;
+        }
+        if (caloriesConsumed.trim() === '' || isNaN(caloriesConsumed)) {
+            setNutritionError('Calories consumed must be a number');
+            return false;
+        }
+        if (mealType.trim() === '' || !isAlphabetic(mealType)) {
+            setNutritionError('Meal type is required and must only contain letters');
+            return false;
+        }
+        if (servingSize.trim() === '' || isNaN(servingSize)) {
+            setNutritionError('Serving size must be a number');
+            return false;
+        }
+
+        setNutritionError('');
+        return true;
+    };
 
     const handleAddNutrition = async () => {
+        if (!validateNutritionInput()) {
+            return;
+        }
+
         try {
             const userId = await AsyncStorage.getItem("userId");
             await addNutritionData(
@@ -78,7 +107,7 @@ const DiaryScreen = () => {
             );
 
             await updateUserData(userId, 0, parseInt(caloriesConsumed), 0);
-            
+
             setNutritionModalVisible(false);
             fetchData();
         } catch (error) {
@@ -86,7 +115,21 @@ const DiaryScreen = () => {
         }
     };
 
+    const validateSleepInput = () => {
+        if (sleepDuration.trim() === '' || isNaN(sleepDuration) || parseFloat(sleepDuration) <= 0) {
+            setSleepError('Sleep duration must be a positive number');
+            return false;
+        }
+
+        setSleepError('');
+        return true;
+    };
+
     const handleAddSleep = async () => {
+        if (!validateSleepInput()) {
+            return;
+        }
+
         try {
             const userId = await AsyncStorage.getItem("userId");
             await addSleepData(userId, parseInt(sleepDuration));
@@ -152,6 +195,9 @@ const DiaryScreen = () => {
                         keyboardType="numeric"
                         style={styles.input}
                     />
+                    {sleepError ? (
+                        <Text style={{ color: 'red', marginBottom: 10 }}>{sleepError}</Text>
+                    ) : null}
                     <Button onPress={handleAddSleep} mode="contained">
                         Add Sleep Data
                     </Button>
@@ -202,6 +248,9 @@ const DiaryScreen = () => {
                         keyboardType="numeric"
                         style={styles.input}
                     />
+                    {nutritionError ? (
+                        <Text style={{ color: 'red', marginBottom: 10 }}>{nutritionError}</Text>
+                    ) : null}
                     <Button onPress={handleAddNutrition} mode="contained">
                         Add Nutrition Data
                     </Button>

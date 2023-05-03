@@ -21,6 +21,8 @@ const WorkoutScreen = () => {
     //   const [userData, setUserData] = useState([]);
     const [stepData, setStepData] = useState({});
     const [workoutData, setWorkoutData] = useState({});
+    const [workoutError, setWorkoutError] = useState('');
+    const [stepsError, setStepsError] = useState('');
 
     useEffect(() => {
         fetchData();
@@ -62,8 +64,41 @@ const WorkoutScreen = () => {
         return null;
     };
 
+    const isAlphabetic = (str) => /^[a-zA-Z\s]+$/.test(str);
+    const isNumeric = (str) => /^[0-9]+(\.[0-9]+)?$/.test(str);
 
+    const validateWorkoutInput = () => {
+        setWorkoutError('');
+        if (activityType.trim() === '' || !isAlphabetic(activityType)) {
+            setWorkoutError('Workout type is required and must only contain letters');
+            return false;
+        }
+        if (!isNumeric(duration)) {
+            setWorkoutError('Duration must be a number');
+            return false;
+        }
+        if (!isNumeric(distance)) {
+            setWorkoutError('Distance must be a number');
+            return false;
+        }
+        if (!isNumeric(caloriesBurned)) {
+            setWorkoutError('Calories burned must be a number');
+            return false;
+        }
+        return true;
+    };
+
+    const validateStepsInput = () => {
+        setStepsError('');
+        if (!isNumeric(stepsTaken)) {
+            setStepsError('Steps taken must be a number');
+            return false;
+        }
+        return true;
+    };
     const handleAddWorkout = async () => {
+        if (!validateWorkoutInput()) return;
+
         try {
             const userId = await AsyncStorage.getItem('userId');
             await addWorkoutData(
@@ -84,6 +119,8 @@ const WorkoutScreen = () => {
     };
 
     const handleAddSteps = async () => {
+        if (!validateStepsInput()) return;
+
         try {
             const userId = await AsyncStorage.getItem('userId');
             await addStepsData(userId, parseInt(stepsTaken));
@@ -96,7 +133,6 @@ const WorkoutScreen = () => {
             console.error('Error adding steps data:', error);
         }
     };
-
     const sortedStepData = Object.values(stepData).sort((a, b) =>
         a.timestamp.localeCompare(b.timestamp)
     );
@@ -104,25 +140,6 @@ const WorkoutScreen = () => {
     const sortedWorkoutData = Object.values(workoutData).sort((a, b) =>
         a.timestamp.localeCompare(b.timestamp)
     );
-
-
-    // const renderWorkoutItem = ({ item }) => (
-    //     <View style={styles.historyItem}>
-    //         <Text style={styles.activityType}>{item.type}</Text>
-    //         <Text style={styles.timestamp}>{item.timestamp}</Text>
-    //         <Text style={styles.distance}>{item.distance} miles</Text>
-    //         <Text style={styles.duration}>{item.duration} minutes</Text>
-    //         <Text style={styles.caloriesBurned}>{item.caloriesBurned} kcal</Text>
-    //     </View>
-    // );
-
-    // const renderStepsItem = ({ item }) => (
-    //     <View style={styles.historyItem}>
-    //         <Text style={styles.activityType}>{item.type}</Text>
-    //         <Text style={styles.timestamp}>{item.timestamp}</Text>
-    //         <Text style={styles.stepsTaken}>{item.stepsTaken} steps</Text>
-    //     </View>
-    // );
 
     return (
         <ScrollView style={styles.container}>
@@ -194,6 +211,7 @@ const WorkoutScreen = () => {
             </View> */}
             <Modal isVisible={workoutModalVisible}>
                 <View style={styles.modalContent}>
+                    {workoutError ? <Text style={styles.error}>{workoutError}</Text> : null}
                     <TextInput
                         label="Activity Type"
                         value={activityType}
@@ -232,6 +250,7 @@ const WorkoutScreen = () => {
 
             <Modal isVisible={stepsModalVisible}>
                 <View style={styles.modalContent}>
+                    {stepsError ? <Text style={styles.error}>{stepsError}</Text> : null}
                     <TextInput
                         label="Steps Taken"
                         value={stepsTaken}
@@ -305,6 +324,10 @@ const styles = StyleSheet.create({
     },
     stepsTaken: {
         color: 'purple',
+    },
+    error: {
+        color: 'red',
+        marginTop: 8,
     },
 });
 

@@ -1,13 +1,31 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { login } from '../firebase/dbRequests';
+import EmailValidator from 'email-validator';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
+    const validatePassword = (password) => {
+        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
+        return passwordRegex.test(password);
+    };
+
     const handleLogin = async () => {
+
+        setError('');
+
+        if (!validatePassword(password)) {
+            setError("Password isn't strong enough (One upper, one lower, one special, one number, at least 8 characters long)");
+            return;
+        }
+
+        if (!EmailValidator.validate(email)) {
+            this.setState({ error: 'Must enter valid email' });
+            return;
+        }
         try {
             const userData = await login(email, password);
             console.log(userData);
