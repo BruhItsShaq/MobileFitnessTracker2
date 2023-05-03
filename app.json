@@ -5,6 +5,12 @@
     "version": "1.0.0",
     "assetBundlePatterns": [
       "**/*"
-    ]
+    ],
+    "ios": {
+      "bundleIdentifier": "com.BruhItsShaq.mobilefitnesstracker"
+    },
+    "android": {
+      "package": "com.BruhItsShaq.mobilefitnesstracker"
+    }
   }
 }
