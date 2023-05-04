@@ -50,7 +50,7 @@ const SignUp = ({ navigation }) => {
         // Call signUp function and handle errors
         try {
             await signUp(email, password, username, age, gender, weight, height, activityLevel, goal, sleepGoal, calorieGoal);
-            navigation.navigate('Main');
+            navigation.navigate('Login');
         } catch (error) {
             setError(error.message);
         }

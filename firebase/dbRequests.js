@@ -39,7 +39,10 @@ export const signUp = async (email, password, username, age, gender, weight, hei
             sleep_goal: sleepGoal,
             username: username,
             weight: weight,
-            calorie_goal: calorieGoal
+            calorie_goal: calorieGoal,
+            total_calories_burned: 0,
+            total_calories_eaten: 0,
+            total_steps: 0
         });
     } catch (error) {
         // Handle errors here
